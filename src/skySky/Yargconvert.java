@@ -52,7 +52,7 @@ public class Yargconvert {
                 break;
         }
         String[] sps = new String[colorCount];
-        for (int i = 0; i < colorCount; i++) { // no 0 cuz most stuff doesnt have opens
+        for (int i = 0; i < colorCount; i++) {
             String color = null;
             boolean isguitar = (instrument == PlasticInstrument.Guitar);
             switch (instrument) {
