@@ -3,9 +3,13 @@ package skySky;
 import java.awt.Color;
 import java.util.*;
 
+// the everything class
+// actually its mostly method for doing things in bulks, aswell as workarounds for java library shenans
+// this exists in many projects of mine so some of the methods here are unused leftovers from copypasting this thing
+
 public class Utils {
 
-    private Utils() {
+    private Utils() { // because why would you need an instance for this
     }
 
     public static String[] trimMany(String[] s) {
@@ -278,7 +282,7 @@ public class Utils {
         return result;
     }
 
-    // from
+    // yoinked from
     // https://stackoverflow.com/questions/5711084/java-runtime-getruntime-getting-output-from-executing-a-command-line-program
     public static String execCmd(String cmd) throws java.io.IOException {
         java.util.Scanner sc = new java.util.Scanner(Runtime.getRuntime().exec(cmd).getInputStream())
@@ -414,6 +418,20 @@ public class Utils {
         return (int) Long.decode(s).longValue();
     }
 
+    /*
+     * ok bitRotate might not be the best words
+     * basically it shifts but the things that got shifted away are appended to the
+     * end again
+     * so like
+     * bitRotateLeft(0110 0101, 2)
+     * would get the leftmost two bits [01] 10 0101
+     * and move em to the end 10 0101 [01]
+     * Mainly used because YARG puts its alpha value in the last eight bits (so in
+     * 004499FF, the FF is the alpha)
+     * but java.awt.Color puts the alpha value in the first eight bits (so in
+     * 004499FF, the 00 is the alpha)
+     * and manually converting between those everytime is a nightmare
+     */
     static int bitRotateLeft(int number, int bitCount) {
         bitCount = bitCount % 32;
         if (bitCount == 0)
@@ -435,27 +453,5 @@ public class Utils {
             bitCount += 32;
         }
         return bitRotateLeft(number, 32 - bitCount);
-    }
-
-    public static final class CHKeys {
-
-        // note_kick_sp_phrase is same as note_kick
-        // note_anim_kick_sp_phrase is same as note_anim_kick
-        // note_overlay_kick_sp_phrase is normalSp - 0x282828
-        // note_kick_sp_active is normalSp - 0x707070
-        public static final String[] normalSpKeys = { "note_sp_active", "note_sp_phrase", "note_sp_phrase_active",
-                "sustain_sp_phrase",
-                "sustain_sp_phrase_active", "sustain_sp_active" };
-        public static final String[] normalAnimSpKeys = { "note_anim_sp_active", "note_anim_sp_phrase" };
-        public static final String[] whiteSpKeys = { "note_anim_sp_phrase_active" };
-
-        public static final String[] normalSpKeysDrum = { "tom_sp_phrase", "tom_sp_phrase_active", "tom_sp_active",
-                "note_anim_kick_sp_active" };
-        public static final String[] normalAnimSpKeysDrum = { "tom_anim_sp_active", "tom_anim_sp_phrase" };
-        public static final String[] whiteSpKeysDrum = { "tom_anim_sp_phrase_active", "cym_anim_sp_active",
-                "note_anim_kick_sp_phrase_active", "note_kick_sp_phrase_active" };
-        public static final String[] cymbalSpKeys = { "cym_sp_active", "cym_sp_phrase", "cym_sp_phrase_active",
-                "cym_anim_sp_active",
-                "cym_anim_sp_phrase" };
     }
 }
