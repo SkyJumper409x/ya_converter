@@ -71,34 +71,19 @@ public class Yargconvert {
             if (instrument == PlasticInstrument.FiveLaneDrums && color.equals("Orange")) {
                 continue;
             }
-            boolean isguitar = (instrument == PlasticInstrument.Guitar);
+            String note = yargMap.get(
+                    color + (instrument == PlasticInstrument.Guitar ? "Note"
+                            : (color.equals("Kick") ? "Note" : "Drum")));
 
-            String noteKey = color;
-            String spKey = color;
+            sps[i] = yargMap.get(color + (color.equals("Kick") ? "" : "Note") + "StarPower");
 
-            String strikerPrefix = "striker_";
-            String notePrefix = "note_";
-
-            if (!isguitar) {
-                strikerPrefix = "drums_" + strikerPrefix;
-                if (i != 0) {
-                    // !color.equals("Kick")
-                    noteKey += "Drum";
-                    spKey += "NoteStarPower";
-                    notePrefix = "tom_";
-                } else {
-                    // color.equals("Kick")
-                    noteKey += "Note";
-                    spKey += "StarPower";
-                }
-            }
-            String note = yargMap.get(noteKey);
-            sps[i] = yargMap.get(spKey);
             String innerFret = yargMap.get(color + "FretInner");
+            String strikerPrefix = (instrument == PlasticInstrument.Guitar ? ""
+                    : "drums_") + "striker_";
             String chColor = color.toLowerCase();
+            String notePrefix = instrument == PlasticInstrument.Guitar || i == 0 ? "note_" : "tom_";
             outputMap.put(notePrefix + chColor, ytc(note));
-            outputMap.put(notePrefix + "anim_" + chColor, color.equals("Open") ? "#FFFFFF" : chAnim(note));
-
+            outputMap.put(notePrefix + "anim_" + chColor, chAnim(note));
             if (i != 0) {
                 if (instrument == PlasticInstrument.Drums) {
                     String cymbal = yargMap.get(color + "Cymbal");
