@@ -3,21 +3,23 @@ package skySky;
 import java.util.*;
 import java.io.*;
 import java.awt.Color;
-import static skySky.Utils.CHKeys.*;
+import static skySky.CHKeys.*;
 
 public class Yargconvert {
     static String[] colors = new String[] { "Open", "Green", "Red", "Yellow", "Blue", "Orange" };
     static String[] drumColors = new String[] { "Kick", "Red", "Yellow", "Blue", "Green" };
     static String[] drumFiveLaneColors = new String[] { "Kick", "Red", "Yellow", "Blue", "Orange", "Green" };
     static String[] sfColors = new String[] {
-            "sf_note_open",
-            "sf_note_black_left", "sf_note_black_mid", "sf_note_black_right",
-            "sf_note_white_left", "sf_note_white_mid", "sf_note_white_right"
+            "open",
+            "black_left", "black_mid", "black_right",
+            "white_left", "white_mid", "white_right"
     };
     static String baseColorChoice = "#FFFFFF";
-    static String openHeadLightChoice = "innerFret"; // innerfret, noteComplement, sameAsNote, or some custom color
     // 5fret: Fret, FretInner, Particles, Note, NoteStarPower
     // Drums: Fret, FretInner, Particles, Drum, DrumStarPower
+
+    static String openHeadLightChoice = "innerFret"; // innerfret, noteComplement, sameAsNote, or some custom color
+    // openHeadLightChoice will be set by the ui once i actually make it lol
 
     public static void main(String[] args) {
 
@@ -52,6 +54,7 @@ public class Yargconvert {
         String[] sps = new String[colorCount];
         for (int i = 0; i < colorCount; i++) { // no 0 cuz most stuff doesnt have opens
             String color = null;
+            boolean isguitar = (instrument == PlasticInstrument.Guitar);
             switch (instrument) {
                 case Drums:
                     color = drumColors[i];
@@ -68,21 +71,25 @@ public class Yargconvert {
                 default:
                     break;
             }
+            String chColor = color.toLowerCase();
             if (instrument == PlasticInstrument.FiveLaneDrums && color.equals("Orange")) {
                 continue;
             }
-            boolean isguitar = (instrument == PlasticInstrument.Guitar);
 
             String noteKey = color;
             String spKey = color;
 
-            String strikerPrefix = "striker_";
+            String strikerPrefix = "";
             String notePrefix = "note_";
 
             if (!isguitar) {
-                strikerPrefix = "drums_" + strikerPrefix;
+                strikerPrefix = "drums_";
                 if (i != 0) {
                     // !color.equals("Kick")
+                    String cymbal = yargMap.get(color + "Cymbal");
+                    outputMap.put("cym_" + chColor, ytc(cymbal));
+                    outputMap.put("cym_anim_" + chColor, chAnim(cymbal));
+
                     noteKey += "Drum";
                     spKey += "NoteStarPower";
                     notePrefix = "tom_";
@@ -92,36 +99,50 @@ public class Yargconvert {
                     spKey += "StarPower";
                 }
             }
-
-            String note = yargMap.get(noteKey);
             sps[i] = yargMap.get(spKey);
-            String innerFret = yargMap.get(color + "FretInner");
-            String chColor = color.toLowerCase();
-            outputMap.put(notePrefix + chColor, ytc(note));
-            outputMap.put(notePrefix + "anim_" + chColor, color.equals("Open") ? "#FFFFFF" : chAnim(note));
 
+            String yargNote = yargMap.get(noteKey);
+            String animValue = chAnim(yargNote);
+            if (color.equals("Open")) {
+                animValue = "#FFFFFF";
+            }
+            outputMap.put(notePrefix + chColor, ytc(yargNote));
+            outputMap.put(notePrefix + "anim_" + chColor, animValue);
+
+            String innerFret = ytc(yargMap.get(color + "FretInner"));
             if (i != 0) {
-                if (instrument == PlasticInstrument.Drums) {
-                    String cymbal = yargMap.get(color + "Cymbal");
-                    outputMap.put("cym_" + chColor, ytc(cymbal));
-                    outputMap.put("cym_anim_" + chColor, chAnim(cymbal));
-                }
+                // not in the further up if(i != 0) cuz these are instrument independent
+                // altho strikerprefix was set depending on isGuitar earlier but shhh
                 String fret = yargMap.get(color + "Fret");
-                outputMap.put(strikerPrefix + "cover_" + chColor, ytc(fret));
-                outputMap.put(strikerPrefix + "head_cover_" + chColor, ytc(fret));
-                outputMap.put(strikerPrefix + "head_light_" + chColor, ytc(innerFret));
-                outputMap.put(strikerPrefix + "base_" + chColor, baseColorChoice);
+                outputMap.put(strikerPrefix + "striker_cover_" + chColor, ytc(fret));
+                outputMap.put(strikerPrefix + "striker_head_cover_" + chColor, ytc(fret));
+                outputMap.put(strikerPrefix + "striker_head_light_" + chColor, innerFret);
+                outputMap.put(strikerPrefix + "striker_base_" + chColor, baseColorChoice);
 
             } else {
+                // all these start with open but it also works and is intended to run for kick
+                String openHeadLightColor = null;
+
+                switch (openHeadLightChoice) {
+                    case "innerFret":
+                        openHeadLightColor = innerFret;
+                        break;
+                    case "noteComplement":
+                        openHeadLightColor = complementaryChColor(yargNote);
+                        break;
+                    case "sameAsNote":
+                        openHeadLightColor = ytc(yargNote);
+                        break;
+                    default: // treat openHeadLightChoice as a custom color (which is what it will be set to
+                             // if user picks custom color)
+                        openHeadLightColor = openHeadLightChoice;
+                        break;
+                }
                 outputMap.put(strikerPrefix
-                        + "head_light_" + chColor,
-                        findOpenHeadLightColor(innerFret, note));
+                        + "striker_head_light_" + chColor, openHeadLightColor);
             }
         }
-        // even if the yarg sps arent equal, these can be added cuz they are separate in
-        // ch for some reason
-        outputMap.put("note_kick_sp_phrase", ytc(sps[0]));
-        outputMap.put("note_anim_kick_sp_phrase", chAnim(sps[0]));
+        // sp stuff
         boolean spsEqual = true;
         String previousSp = sps[0];
         for (String string : sps) {
@@ -131,6 +152,10 @@ public class Yargconvert {
         if (spsEqual) {
             outputMap.putAll(createChSpKeyVals(previousSp, instrument));
         }
+        // even if the yarg sps arent equal, these can be added cuz they are separate in
+        // ch for some reason
+        outputMap.put("note_kick_sp_phrase", ytc(sps[0]));
+        outputMap.put("note_anim_kick_sp_phrase", chAnim(sps[0]));
         return outputMap;
     }
 
@@ -160,7 +185,7 @@ public class Yargconvert {
             result.put(key, chSp);
         }
 
-        String anim = Utils.betterBrighter(yargSp, 0x051);
+        String anim = ytc(Utils.betterBrighter(yargSp, 0x051));
         for (String key : normalAnim) {
             result.put(key, anim);
         }
@@ -171,42 +196,23 @@ public class Yargconvert {
     }
 
     static String chCymSp(String normalYargSp) {
-        Color c = new Color(Integer.parseUnsignedInt(normalYargSp) >>> 8, true);
+        Color c = new Color(Integer.parseUnsignedInt(normalYargSp) >>> 8);
         float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
         return "#" + Utils.formatHex(true, 6,
                 Color.HSBtoRGB((hsb[0] * 360f - 19f) / 360f, hsb[1] - 0.49f, hsb[2])
                         & 0x00ffffff);
     }
 
-    static String findOpenHeadLightColor(String innerFret, String note) {
-        switch (openHeadLightChoice) {
-            case "innerFret":
-                return innerFret;
-            case "noteComplement":
-                /*
-                 * lil bit of bitmagic: ~ inverts all bits, and 0 is all zeros, so ~0 is all 1sm
-                 * which is the rgba color (255,255,255,255)
-                 * now i subtract c's rgb from it (which, for the default clone hero green fret,
-                 * would be 00FF00, so (0, 255, 0, 255)) to get the complementary color
-                 * (255, 0, 255, 0). yes, i subtract both alphas, but the color constructor
-                 * accepts an *rgb* int, ***not*** an rbga int, so the alpha defaults to 255.
-                 * Then i use the Utils Method i made for formatting hex numbers, because
-                 * Integer.toHexString() doesnt zero-pad.
-                 */
-                Color complementary = new Color(~Integer.parseUnsignedInt(removeAlpha(note), 16));
-                return Utils.formatHex(true, Utils.bitRotateLeft(complementary.getRGB(), 8));
-            case "sameAsNote":
-                return note;
-            default: // treat openHeadLightChoice as a custom color
-                return openHeadLightChoice;
-        }
+    static String complementaryChColor(String yargColor) {
+        int colorInt = Integer.parseUnsignedInt(removeAlpha(yargColor), 16);
+        return "#" + Utils.formatHex(true, 6, (~colorInt) & 0x00FFFFFF);
     }
 
     static String chAnim(String colString) {
         return ytc(Utils.betterBrighter(colString, 0x08b));
     }
 
-    static String ytc(String colString) { // shorthand
+    static String ytc(String colString) { // shorthand cuz yes
         return yargToChColor(colString);
     }
 
