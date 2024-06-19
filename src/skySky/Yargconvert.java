@@ -96,6 +96,10 @@ public class Yargconvert {
             String notePrefix = "note_";
 
             if (!isguitar) {
+                // even if the yarg sps arent equal, these can be added cuz they are separate in
+                // ch for some reason
+                outputMap.put("note_kick_sp_phrase", ytc(sps[0]));
+                outputMap.put("note_anim_kick_sp_phrase", chAnim(sps[0]));
                 strikerPrefix = "drums_";
                 if (i != 0) {
                     // !color.equals("Kick")
@@ -130,6 +134,9 @@ public class Yargconvert {
             outputMap.put(notePrefix + "anim_" + chColor, animValue);
 
             String innerFret = ytc(yargMap.get(color + "FretInner"));
+            if (isguitar) {
+                outputMap.put("sustain_" + chColor, ytc(Utils.betterBrighter(yargNote, 0x030)));
+            }
             if (i != 0) {
                 // not in the further up if(i != 0) cuz these are instrument independent
                 // altho strikerprefix was set depending on isGuitar earlier but shhh
@@ -172,10 +179,6 @@ public class Yargconvert {
         if (spsEqual) {
             outputMap.putAll(createChSpKeyVals(previousSp, instrument));
         }
-        // even if the yarg sps arent equal, these can be added cuz they are separate in
-        // ch for some reason
-        outputMap.put("note_kick_sp_phrase", ytc(sps[0]));
-        outputMap.put("note_anim_kick_sp_phrase", chAnim(sps[0]));
         return outputMap;
     }
 
