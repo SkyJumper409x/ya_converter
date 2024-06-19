@@ -22,13 +22,26 @@ public class Yargconvert {
     // openHeadLightChoice will be set by the ui once i actually make it lol
 
     public static void main(String[] args) {
-
+        // just for testing, not the final contents of the main method
+        // put the filepath to the yarg color preset in the empty string
+        Yargconvert.yargToCh(new File(""),
+                new File("ya_converter_out.ini"));
     }
 
     static void yargToCh(File yargFile, File chFile) {
         HashMap<String, HashMap<String, String>> theMap = readYargFile(yargFile);
         HashMap<String, String> guitarMap = theMap.get("FiveFretGuitar");
         HashMap<String, String> guitarOutputMap = yargToCh(guitarMap, PlasticInstrument.Guitar);
+        try {
+            PrintWriter p = new PrintWriter(chFile);
+            Set<String> keys = guitarOutputMap.keySet();
+            for (String key : keys) {
+                p.println(String.format("%s = %s", key, guitarOutputMap.get(key)));
+            }
+            p.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     static HashMap<String, String> yargToCh(HashMap<String, String> yargMap, PlasticInstrument instrument) {
@@ -71,12 +84,12 @@ public class Yargconvert {
                 default:
                     break;
             }
-            String chColor = color.toLowerCase();
             if (instrument == PlasticInstrument.FiveLaneDrums && color.equals("Orange")) {
                 continue;
             }
+            String chColor = color.toLowerCase();
 
-            String noteKey = color;
+            String noteKey = color + "Note";
             String spKey = color;
 
             String strikerPrefix = "";
@@ -90,16 +103,23 @@ public class Yargconvert {
                     outputMap.put("cym_" + chColor, ytc(cymbal));
                     outputMap.put("cym_anim_" + chColor, chAnim(cymbal));
 
-                    noteKey += "Drum";
-                    spKey += "NoteStarPower";
+                    noteKey = color + "Drum";
+                    spKey += "Drum";
                     notePrefix = "tom_";
-                } else {
-                    // color.equals("Kick")
-                    noteKey += "Note";
-                    spKey += "StarPower";
-                }
+                } // else {
+                  // color.equals("Kick")
+                  // so we have to use neither Drum nor Note even though Drum is used for all
+                  // other drums
+                  // }
+            } else {
+                spKey += "Note";
             }
+            spKey += "StarPower";
             sps[i] = yargMap.get(spKey);
+            if (sps[i] == null) {
+                System.out.println("broken key is " + spKey);
+                System.exit(1);
+            }
 
             String yargNote = yargMap.get(noteKey);
             String animValue = chAnim(yargNote);
