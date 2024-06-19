@@ -32,11 +32,20 @@ public class Yargconvert {
         HashMap<String, HashMap<String, String>> theMap = readYargFile(yargFile);
         HashMap<String, String> guitarMap = theMap.get("FiveFretGuitar");
         HashMap<String, String> guitarOutputMap = yargToCh(guitarMap, PlasticInstrument.Guitar);
+        HashMap<String, String> drumMap = theMap.get("FourLaneDrums");
+        HashMap<String, String> drumOutputMap = yargToCh(drumMap, PlasticInstrument.Drums);
         try {
             PrintWriter p = new PrintWriter(chFile);
-            Set<String> keys = guitarOutputMap.keySet();
-            for (String key : keys) {
+            p.println("[guitar]");
+            Set<String> guitarKeys = guitarOutputMap.keySet();
+            for (String key : guitarKeys) {
                 p.println(String.format("%s = %s", key, guitarOutputMap.get(key)));
+            }
+            p.println();
+            p.println("[drums]");
+            Set<String> drumKeys = drumOutputMap.keySet();
+            for (String key : drumKeys) {
+                p.println(String.format("%s = %s", key, drumOutputMap.get(key)));
             }
             p.close();
         } catch (Exception ex) {
@@ -96,10 +105,6 @@ public class Yargconvert {
             String notePrefix = "note_";
 
             if (!isguitar) {
-                // even if the yarg sps arent equal, these can be added cuz they are separate in
-                // ch for some reason
-                outputMap.put("note_kick_sp_phrase", ytc(sps[0]));
-                outputMap.put("note_anim_kick_sp_phrase", chAnim(sps[0]));
                 strikerPrefix = "drums_";
                 if (i != 0) {
                     // !color.equals("Kick")
@@ -110,21 +115,20 @@ public class Yargconvert {
                     noteKey = color + "Drum";
                     spKey += "Drum";
                     notePrefix = "tom_";
-                } // else {
-                  // color.equals("Kick")
-                  // so we have to use neither Drum nor Note even though Drum is used for all
-                  // other drums
-                  // }
+                } else {
+                    // color.equals("Kick")
+                    // so we have to use neither Drum nor Note even though Drum is used for all
+                    // other drums;
+                }
+                spKey += "Starpower";
             } else {
-                spKey += "Note";
+                spKey += "NoteStarPower"; // yes, the difference in capitalization is like that.
             }
-            spKey += "StarPower";
             sps[i] = yargMap.get(spKey);
             if (sps[i] == null) {
                 System.out.println("broken key is " + spKey);
                 System.exit(1);
             }
-
             String yargNote = yargMap.get(noteKey);
             String animValue = chAnim(yargNote);
             if (color.equals("Open")) {
@@ -193,6 +197,11 @@ public class Yargconvert {
             white = whiteSpKeysDrum;
             result.put("note_overlay_kick_sp_phrase", ytc(Utils.betterBrighter(yargSp, -0x028)));
             result.put("note_kick_sp_active", ytc(Utils.betterBrighter(yargSp, -0x070)));
+            // even if the yarg sps arent equal, these can be added cuz they are separate in
+            // ch for some reason
+            // but i dont so its all in 1 place
+            result.put("note_kick_sp_phrase", ytc(yargSp));
+            result.put("note_anim_kick_sp_phrase", chAnim(yargSp));
             String cymSp = chCymSp(yargSp);
             for (String key : cymbalSpKeys) {
                 result.put(key, cymSp);
@@ -219,7 +228,7 @@ public class Yargconvert {
     }
 
     static String chCymSp(String normalYargSp) {
-        Color c = new Color(Integer.parseUnsignedInt(normalYargSp) >>> 8);
+        Color c = new Color(Integer.parseUnsignedInt(normalYargSp, 16) >>> 8);
         float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
         return "#" + Utils.formatHex(true, 6,
                 Color.HSBtoRGB((hsb[0] * 360f - 19f) / 360f, hsb[1] - 0.49f, hsb[2])
