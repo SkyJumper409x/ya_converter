@@ -1,1 +1,3 @@
-ya_converter_out.ini
+*_converted.ini
+bin/*
+build/*

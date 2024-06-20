@@ -342,7 +342,7 @@ public class Utils {
     public static String formatHex(boolean zeroPadded, int digitCount, int i) {
         String result = String.format("%" + digitCount + "x", i);
         if (zeroPadded) {
-            return result.replace(' ', '0');
+            return result.replace(' ', '0').toUpperCase();
         }
         return result.toUpperCase();
     }
@@ -391,16 +391,22 @@ public class Utils {
 
     public static String betterBrighter(String s, int i) {
         int colorInt = 0;
-        if (isParseIntAble(s, 16)) {
+        boolean isChColor = s.charAt(0) == '#' && s.length() == 7 && !isParseIntAble(s, 16);
+        if (isChColor) {
+            colorInt = decodeUnsigned(s) << 8;
+        } else if (isParseIntAble(s, 16)) {
             colorInt = Integer.parseUnsignedInt(s, 16);
         } else {
-            colorInt = decodeUnsigned(s);
+            System.out.println();
         }
         int newRed = Math.max(0, Math.min(((colorInt & redBits) >>> redBitsShift) + i, 255));
         int newGreen = Math.max(0, Math.min(((colorInt & greenBits) >>> greenBitsShift) + i, 255));
         int newBlue = Math.max(0, Math.min(((colorInt & blueBits) >>> blueBitsShift) + i, 255));
         int alpha = colorInt & alphaBits;
         int newColorInt = (newRed << redBitsShift) | (newGreen << greenBitsShift) | (newBlue << blueBitsShift) | alpha;
+        if (isChColor) {
+            return "#" + formatHex(true, 6, newColorInt >>> 8);
+        }
         return formatHex(true, newColorInt);
     }
 
@@ -420,8 +426,7 @@ public class Utils {
 
     /*
      * ok bitRotate might not be the best words
-     * basically it shifts but the things that got shifted away are appended to the
-     * end again
+     * it shifts but the things that got shifted away are appended to the end
      * so like
      * bitRotateLeft(0110 0101, 2)
      * would get the leftmost two bits [01] 10 0101
@@ -454,4 +459,38 @@ public class Utils {
         }
         return bitRotateLeft(number, 32 - bitCount);
     }
+
+    static String hueShiftCh(String chColor, int amount) {
+        return hsvShiftCh(chColor, amount, 0, 0);
+    }
+
+    static String hsvShiftCh(String chColor, int h, int s, int v) {
+
+        Color c = new Color(Integer.parseUnsignedInt(chColor.substring(1), 16));
+        float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
+        return "#" + Utils.formatHex(true, 6,
+                Color.HSBtoRGB((hsb[0] * 360f + h) / 360f, hsb[1] + (Float.valueOf(s) / 100f),
+                        hsb[2] + (Float.valueOf(v) / 100f))
+                        & 0x00ffffff);
+    }
+
+    // kind of Three-fingered claw
+    public static void yell(String msg) {
+        System.out.println(msg);
+        System.err.println(msg);
+    }
+
+    public static void die(String msg) {
+        die(msg, 1);
+    }
+
+    public static void die(String msg, int exitcode) {
+        yell(msg);
+        System.exit(exitcode);
+    }
+
+    public static void die() {
+        die("", 1);
+    }
+
 }

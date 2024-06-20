@@ -2,18 +2,16 @@ package skySky;
 
 import java.util.*;
 import java.io.*;
-import java.awt.Color;
 import static skySky.CHKeys.*;
+import static skySky.Utils.yell;
+import static skySky.Utils.die;
 
 public class Yargconvert {
-    static String[] colors = new String[] { "Open", "Green", "Red", "Yellow", "Blue", "Orange" };
-    static String[] drumColors = new String[] { "Kick", "Red", "Yellow", "Blue", "Green" };
-    static String[] drumFiveLaneColors = new String[] { "Kick", "Red", "Yellow", "Blue", "Orange", "Green" };
-    static String[] sfColors = new String[] {
-            "open",
-            "black_left", "black_mid", "black_right",
-            "white_left", "white_mid", "white_right"
-    };
+    static final List<String> colors;
+    static final List<String> drumColors;
+    static final List<String> drumFiveLaneColors;
+    static final List<String> sfColors;
+    private static List<String> colorsThing, drumColorsThing, drumFiveLaneColorsThing, sfColorsThing;
     static String baseColorChoice = "#FFFFFF";
     // 5fret: Fret, FretInner, Particles, Note, NoteStarPower
     // Drums: Fret, FretInner, Particles, Drum, DrumStarPower
@@ -21,51 +19,200 @@ public class Yargconvert {
     static String openHeadLightChoice = "innerFret"; // innerfret, noteComplement, sameAsNote, or some custom color
     // openHeadLightChoice will be set by the ui once i actually make it lol
 
+    private static final Map<String, String> chOtherConstants;
+    static {
+        /*
+         * the reason these are not directly assigned is that compiler complains that
+         * they may not have been assigned if i try to do so, aswell as complaining in
+         * createColorConstants that they cannot be assigned.
+         */
+        createColorConstants();
+        colors = colorsThing;
+        drumColors = drumColorsThing;
+        drumFiveLaneColors = drumFiveLaneColorsThing;
+        sfColors = sfColorsThing;
+
+        HashMap<String, String> thing = new HashMap<String, String>();
+        thing.put("combo_sp_active_glow", "#FFFFFF");
+        thing.put("combo_four_glow", "#E8B1FF");
+        thing.put("combo_three_glow", "#F0FFF0");
+        thing.put("combo_two_glow", "#FFFF00");
+        thing.put("combo_four", "#874E9E");
+        thing.put("combo_three", "#00FF00");
+        thing.put("combo_two", "#D55800");
+        thing.put("combo_one", "#FFDD00");
+        thing.put("striker_hit_particles", "#FF5000");
+        thing.put("striker_hit_flame", "#FFB76D");
+        thing.put("sp_bar_elec", "#B2B2B2");
+        thing.put("general_sp_active", "#FFFFFF");
+        chOtherConstants = Collections.unmodifiableMap(thing);
+    }
+
+    private static void createColorConstants() {
+        colorsThing = Collections.unmodifiableList(Arrays.asList(new String[] {
+                "Open", "Green", "Red", "Yellow", "Blue", "Orange"
+        }));
+        drumColorsThing = Collections.unmodifiableList(Arrays.asList(new String[] {
+                "Kick", "Red", "Yellow", "Blue", "Green"
+        }));
+        drumFiveLaneColorsThing = Collections.unmodifiableList(Arrays.asList(new String[] {
+                "Kick", "Red", "Yellow", "Blue", "Orange", "Green"
+        }));
+        sfColorsThing = Collections.unmodifiableList(Arrays.asList(new String[] {
+                "open",
+                "black_left", "black_mid", "black_right",
+                "white_left", "white_mid", "white_right"
+        }));
+    }
+
     public static void main(String[] args) {
-        // just for testing, not the final contents of the main method
-        // put the filepath to the yarg color preset in the empty string
-        Yargconvert.yargToCh(new File(""),
-                new File("ya_converter_out.ini"));
+        String jarname = new java.io.File(Yargconvert.class.getProtectionDomain()
+                .getCodeSource().getLocation().getPath()).getName();
+        String usage = String.format("Usage: (java -jar %s) <Path to source file> [path to target file]", jarname);
+        if (args.length > 2) {
+            die("Too many arguments were provided.\n" + usage, 65);
+        } else if (args.length < 1) {
+            die("Please provide the path to the source file.\n" + usage, 65);
+        }
+        if (args[0].equals("--help") || args[0].equals("-h") || args[0].equals("-help")) {
+            System.out.println(usage);
+            System.exit(0);
+        }
+        String inPath = args[0];
+        String outPath = args[0].substring(0, args[0].lastIndexOf(".")) + "_converted.ini";
+        if (args.length == 2) {
+            outPath = args[1];
+        }
+        yargToCh(new File(inPath),
+                new File(outPath));
     }
 
     static void yargToCh(File yargFile, File chFile) {
-        HashMap<String, HashMap<String, String>> theMap = readYargFile(yargFile);
-        HashMap<String, String> guitarMap = theMap.get("FiveFretGuitar");
-        HashMap<String, String> guitarOutputMap = yargToCh(guitarMap, PlasticInstrument.Guitar);
-        HashMap<String, String> drumMap = theMap.get("FourLaneDrums");
-        HashMap<String, String> drumOutputMap = yargToCh(drumMap, PlasticInstrument.Drums);
+        if (!yargFile.exists()) {
+            die("Could not find source file.", 65);
+        }
+        if (!yargFile.isFile()) {
+            die("Source is not a file.", 65);
+        }
+        if (chFile.exists()) {
+            System.out.print("Target file already exists");
+            if (!chFile.isFile()) {
+                die(" and is not a File.", 65);
+            }
+            System.out.println(". Overwrite? (y/n)");
+            Scanner sc = new Scanner(System.in);
+            String response = sc.next();
+            sc.close();
+            if (response.equals("n")) {
+                System.out.println("Stopping");
+                System.exit(0);
+            }
+        }
         try {
+            if (!chFile.getParentFile().exists()) {
+                boolean dirCreated = chFile.getParentFile().mkdirs();
+                if (!dirCreated) {
+                    die("Could not create Target file's parent directories: " + chFile.getAbsolutePath(), 64);
+                }
+            }
+            HashMap<String, HashMap<String, String>> theMap = readYargFile(yargFile);
+            HashMap<String, String> guitarMap = theMap.get("FiveFretGuitar");
+            HashMap<String, String> guitarOutputMap = yargToCh(guitarMap, PlasticInstrument.Guitar);
+            HashMap<String, String> drumMap = theMap.get("FourLaneDrums");
+            HashMap<String, String> drumOutputMap = yargToCh(drumMap, PlasticInstrument.Drums);
+            HashMap<String, String> otherMap = otherCh(guitarOutputMap, drumOutputMap);
             PrintWriter p = new PrintWriter(chFile);
+
+            p.println("[other]");
+            Set<String> otherKeys = otherMap.keySet();
+            for (String key : otherKeys) {
+                p.println(String.format("%s = %s", key, otherMap.get(key)));
+            }
+            p.println();
+
             p.println("[guitar]");
             Set<String> guitarKeys = guitarOutputMap.keySet();
             for (String key : guitarKeys) {
                 p.println(String.format("%s = %s", key, guitarOutputMap.get(key)));
             }
             p.println();
+
             p.println("[drums]");
             Set<String> drumKeys = drumOutputMap.keySet();
             for (String key : drumKeys) {
                 p.println(String.format("%s = %s", key, drumOutputMap.get(key)));
             }
+            p.println();
+
+            // sixfret
+            ClassLoader classLoader = Yargconvert.class.getClassLoader();
+            InputStream sfInputStream = classLoader.getResourceAsStream("sf.txt");
+            if (sfInputStream != null) {
+                InputStreamReader isr = new InputStreamReader(sfInputStream);
+                int c = 0;
+                while ((c = isr.read()) != -1) {
+                    p.write(c);
+                }
+                p.println();
+            }
             p.close();
+        } catch (SecurityException securityex) {
+            String msg = securityex.getLocalizedMessage();
+            if (msg != null) {
+                die(msg);
+            }
+            securityex.printStackTrace();
+            die("Some read/write permissions might be missing.");
         } catch (Exception ex) {
             ex.printStackTrace();
+            die();
         }
     }
 
-    static HashMap<String, String> yargToCh(HashMap<String, String> yargMap, PlasticInstrument instrument) {
+    private static HashMap<String, String> otherCh(HashMap<String, String> gtrMap, HashMap<String, String> drumMap) {
+        HashMap<String, String> result = new HashMap<String, String>();
+        result.putAll(chOtherConstants);
+
+        String normalSp = gtrMap.get("note_sp_phrase");
+        if (normalSp == null) {
+            die("\"Wait, didn't I fix that?\" - me when I see this, probably\nAt otherCh: normalSp is null, gtrMap.size(): "
+                    + gtrMap.size());
+        }
+        // combo sp active glow is in constants
+        // combo four-two glow are in constants
+        result.put("combo_sp_active", Utils.betterBrighter(normalSp, -0x022));
+        // combo four-one are in constants
+        result.put("striker_hold_spark_sp_active", complementaryChColor(normalSp.substring(1) + "FF"));
+        result.put("striker_hold_spark", complementaryChColor(normalSp.substring(1) + "FF"));
+        result.put("striker_hit_particles_sp_active", normalSp);
+        // striker hit particles is in constants
+        result.put("striker_hit_flame_sp_active", normalSp);
+        // striker hit flame is in constants
+        result.put("striker_hit_flame_kick", Utils.hueShiftCh(drumMap.get("note_kick"), 26));
+        result.put("striker_hit_flame_open", gtrMap.get("note_open"));
+        result.put("sp_bar_arrow", Utils.betterBrighter(normalSp, 0x07F));
+        // sp bar elec is in constants
+        result.put("sp_bar_color", Utils.betterBrighter(normalSp, -0x0A7));
+        result.put("sp_act_animation", Utils.hsvShiftCh(normalSp, -9, 0, -10));
+        result.put("sp_act_flash", Utils.hsvShiftCh(normalSp, 47, 0, -25));
+        // general sp active is in constants
+        result.put("general_sp", normalSp);
+        return result;
+    }
+
+    private static HashMap<String, String> yargToCh(HashMap<String, String> yargMap, PlasticInstrument instrument) {
         HashMap<String, String> outputMap = new HashMap<>();
 
-        int colorCount = colors.length;
+        int colorCount = colors.size();
         switch (instrument) {
             case Drums:
-                colorCount = drumColors.length;
+                colorCount = drumColors.size();
                 break;
             case FiveLaneDrums:
-                colorCount = drumFiveLaneColors.length;
+                colorCount = drumFiveLaneColors.size();
                 break;
             case Guitar:
-                colorCount = colors.length;
+                colorCount = colors.size();
                 break;
             // case GuitarSF:
             // lastColor = sfColors.length;
@@ -79,13 +226,13 @@ public class Yargconvert {
             boolean isguitar = (instrument == PlasticInstrument.Guitar);
             switch (instrument) {
                 case Drums:
-                    color = drumColors[i];
+                    color = drumColors.get(i);
                     break;
                 case FiveLaneDrums:
-                    color = drumFiveLaneColors[i];
+                    color = drumFiveLaneColors.get(i);
                     break;
                 case Guitar:
-                    color = colors[i];
+                    color = colors.get(i);
                     break;
                 // case GuitarSF:
                 // color = sfColors[i];
@@ -126,8 +273,7 @@ public class Yargconvert {
             }
             sps[i] = yargMap.get(spKey);
             if (sps[i] == null) {
-                System.out.println("broken key is " + spKey);
-                System.exit(1);
+                die("Broken spKey: " + spKey);
             }
             String yargNote = yargMap.get(noteKey);
             String animValue = chAnim(yargNote);
@@ -182,11 +328,13 @@ public class Yargconvert {
         }
         if (spsEqual) {
             outputMap.putAll(createChSpKeyVals(previousSp, instrument));
+        } else {
+            outputMap.putAll(createChSpKeyVals("00FFFFFF", instrument)); // default to 00ffff
         }
         return outputMap;
     }
 
-    static HashMap<String, String> createChSpKeyVals(String yargSp, PlasticInstrument instrument) {
+    private static HashMap<String, String> createChSpKeyVals(String yargSp, PlasticInstrument instrument) {
         String[] normal = null;
         String[] normalAnim = null;
         String[] white = null;
@@ -227,37 +375,33 @@ public class Yargconvert {
         return result;
     }
 
-    static String chCymSp(String normalYargSp) {
-        Color c = new Color(Integer.parseUnsignedInt(normalYargSp, 16) >>> 8);
-        float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
-        return "#" + Utils.formatHex(true, 6,
-                Color.HSBtoRGB((hsb[0] * 360f - 19f) / 360f, hsb[1] - 0.49f, hsb[2])
-                        & 0x00ffffff);
+    private static String chCymSp(String normalYargSp) {
+        return Utils.hsvShiftCh(ytc(normalYargSp), -19, -49, 0);
     }
 
-    static String complementaryChColor(String yargColor) {
+    private static String complementaryChColor(String yargColor) {
         int colorInt = Integer.parseUnsignedInt(removeAlpha(yargColor), 16);
         return "#" + Utils.formatHex(true, 6, (~colorInt) & 0x00FFFFFF);
     }
 
-    static String chAnim(String colString) {
+    private static String chAnim(String colString) {
         return ytc(Utils.betterBrighter(colString, 0x08b));
     }
 
-    static String ytc(String colString) { // shorthand cuz yes
-        return yargToChColor(colString);
+    static String ytc(String yargColor) { // shorthand cuz yes
+        return yargToChColor(yargColor);
     }
 
     static String yargToChColor(String colString) {
         return "#" + removeAlpha(colString);
     }
 
-    static String removeAlpha(String colString) {
+    private static String removeAlpha(String colString) {
         return colString.substring(0, 6);
     }
 
-    static HashMap<String, HashMap<String, String>> readYargFile(File file) {
-        try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+    static HashMap<String, HashMap<String, String>> readYargFile(File yargFile) {
+        try (BufferedReader in = new BufferedReader(new FileReader(yargFile))) {
             String line = null;
 
             HashMap<String, HashMap<String, String>> theMap = new HashMap<>();
@@ -280,46 +424,23 @@ public class Yargconvert {
         return null;
     }
 
-    static boolean isSection(String line) {
+    private static boolean isSection(String line) {
         return line.trim().matches("\".*?\" *: *\\{ *");
     }
 
-    static String parseSectionName(String line) {
+    private static String parseSectionName(String line) {
         return line.substring(line.indexOf("\"") + 1, line.lastIndexOf("\""));
     }
 
-    static boolean isColor(String line) {
+    private static boolean isColor(String line) {
         return line.trim().matches("\".*?\" *: *\".*?\".*");
     }
 
-    static String getKey(String line) {
+    private static String getKey(String line) {
         return line.substring(line.indexOf("\"") + 1, line.indexOf("\"", line.indexOf("\"") + 1));
     }
 
-    static String getValue(String line) {
+    private static String getValue(String line) {
         return line.substring(line.lastIndexOf("\"", line.lastIndexOf("\"") - 1) + 1, line.lastIndexOf("\""));
-    }
-
-    static long d; // reset on generateYargUUID() call
-
-    static synchronized String generateYargUUID() {
-        d = new Date().getTime();
-        String s = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
-        char[] chars = s.toCharArray();
-        String uuid = "";
-        for (char c : chars) {
-            if (c == 'x' || c == 'y') {
-                uuid += randomThing(c);
-            } else {
-                s += c;
-            }
-        }
-        return uuid;
-    }
-
-    static synchronized String randomThing(char c) {
-        int result = (int) ((d + Math.random() * 16) % 16);
-        d = (long) Math.floor(d / 16.0);
-        return Long.toHexString(c == 'x' ? result : ((result & 0x3) | 0x8));
     }
 }
