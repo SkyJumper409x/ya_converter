@@ -29,10 +29,10 @@ for i in "${sourceFileArray[@]}"; do
         die "file $i not found. Stopping..."
     fi
 done
-if [ -e "../build/ya_converter.jar" ] then; rm ../build/ya_converter.jar; fi
+if [ -e "../build/ya_converter.jar" ]; then rm ../build/ya_converter.jar; fi
 if [ ! -e "../build" ]; then mkdir ../build; fi
 
-if [ -e "../bin/skySky/Yargconvert.class" ] then; rm -r ../bin/*; fi
+if [ -e "../bin/skySky/Yargconvert.class" ]; then rm -r ../bin/*; fi
 if [ ! -e "../bin" ]; then mkdir ../bin; fi
 
 javac -d ../bin $sourceFiles
