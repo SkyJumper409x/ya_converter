@@ -3,7 +3,7 @@ package skySky;
 import java.util.*;
 import java.io.*;
 import static skySky.CHKeys.*;
-import static skySky.Utils.yell;
+import static skySky.Utils.complain;
 import static skySky.Utils.die;
 
 public class Yargconvert {
@@ -70,9 +70,9 @@ public class Yargconvert {
                 .getCodeSource().getLocation().getPath()).getName();
         String usage = String.format("Usage: (java -jar %s) <Path to source file> [path to target file]", jarname);
         if (args.length > 2) {
-            die("Too many arguments were provided.\n" + usage, 65);
+            complain("Too many arguments were provided.\n" + usage, 65);
         } else if (args.length < 1) {
-            die("Please provide the path to the source file.\n" + usage, 65);
+            complain("Please provide the path to the source file.\n" + usage, 65);
         }
         if (args[0].equals("--help") || args[0].equals("-h") || args[0].equals("-help")) {
             System.out.println(usage);
@@ -89,15 +89,15 @@ public class Yargconvert {
 
     static void yargToCh(File yargFile, File chFile) {
         if (!yargFile.exists()) {
-            die("Could not find source file.", 65);
+            complain("Could not find source file.", 65);
         }
         if (!yargFile.isFile()) {
-            die("Source is not a file.", 65);
+            complain("Source is not a file.", 65);
         }
         if (chFile.exists()) {
             System.out.print("Target file already exists");
             if (!chFile.isFile()) {
-                die(" and is not a File.", 65);
+                complain(" and is not a File.", 65);
             }
             System.out.println(". Overwrite? (y/n)");
             Scanner sc = new Scanner(System.in);
@@ -158,10 +158,10 @@ public class Yargconvert {
             p.close();
         } catch (SecurityException securityex) {
             String msg = securityex.getLocalizedMessage();
+            securityex.printStackTrace(System.err);
             if (msg != null) {
                 die(msg);
             }
-            securityex.printStackTrace();
             die("Some read/write permissions might be missing.");
         } catch (Exception ex) {
             ex.printStackTrace();

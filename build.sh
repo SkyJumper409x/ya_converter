@@ -37,5 +37,5 @@ if [ ! -e "../bin" ]; then mkdir ../bin; fi
 
 javac -d ../bin $sourceFiles
 cd ../bin
-jar -cvfe ../build/ya_converter.jar Yargconvert -C ../bin/ *
+jar -cvfe ../build/ya_converter.jar skySky.Yargconvert -C ../bin/ *
 echo "finished building in "$(times)""

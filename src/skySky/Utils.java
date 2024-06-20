@@ -476,7 +476,6 @@ public class Utils {
 
     // kind of Three-fingered claw
     public static void yell(String msg) {
-        System.out.println(msg);
         System.err.println(msg);
     }
 
@@ -493,4 +492,16 @@ public class Utils {
         die("", 1);
     }
 
+    public static void complain(String msg) {
+        complain(msg, 1);
+    }
+
+    public static void complain(String msg, int exitcode) {
+        System.out.println(msg);
+        System.exit(exitcode);
+    }
+
+    public static void complain() {
+        complain("", 1);
+    }
 }
